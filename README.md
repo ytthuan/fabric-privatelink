@@ -122,8 +122,7 @@ Pick **one** of the three paths. All use the same modules.
 
 ### 1) Deploy to Azure button (portal)
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)]
-(https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fytthuan%2Ffabric-privatelink%2Fmain%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fytthuan%2Ffabric-privatelink%2Fmain%2Fazuredeploy.json)
 
 
 ### 2) Azure CLI
