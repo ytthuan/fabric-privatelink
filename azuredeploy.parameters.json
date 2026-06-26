@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "namePrefix": {
+      "value": "fabpl"
+    },
+    "hubLocation": {
+      "value": "eastus2"
+    },
+    "onpremLocation": {
+      "value": "eastus"
+    },
+    "fabricCapacityAdmin": {
+      "value": "REPLACE_WITH_ADMIN_UPN@contoso.com"
+    },
+    "capacitySku": {
+      "value": "F2"
+    },
+    "adminUsername": {
+      "value": "azureadmin"
+    },
+    "adminPassword": {
+      "value": "REPLACE_WITH_STRONG_PASSWORD"
+    },
+    "vpnSharedKey": {
+      "value": "REPLACE_WITH_SHARED_KEY"
+    },
+    "deployFabricPrivateLink": {
+      "value": true
+    },
+    "deployBastion": {
+      "value": false
+    },
+    "lockdownOutbound": {
+      "value": false
+    }
+  }
+}

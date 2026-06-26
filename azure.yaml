@@ -1,0 +1,7 @@
+name: fabric-privatelink
+metadata:
+  template: fabric-privatelink@1.0.0
+infra:
+  provider: bicep
+  path: infra
+  module: main

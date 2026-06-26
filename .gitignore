@@ -1,0 +1,12 @@
+# Azure Developer CLI
+.azure/
+
+# Local parameter overrides with secrets
+*.local.json
+.env
+
+# Local tool artifacts
+.impeccable/
+
+# OS
+.DS_Store

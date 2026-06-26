@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "onpremLocation": {
+      "value": "${ONPREM_LOCATION=eastus}"
+    },
+    "fabricCapacityAdmin": {
+      "value": "${FABRIC_CAPACITY_ADMIN}"
+    },
+    "adminUsername": {
+      "value": "${VM_ADMIN_USERNAME=azureadmin}"
+    },
+    "adminPassword": {
+      "value": "${VM_ADMIN_PASSWORD}"
+    },
+    "vpnSharedKey": {
+      "value": "${VPN_SHARED_KEY}"
+    },
+    "capacitySku": {
+      "value": "${FABRIC_CAPACITY_SKU=F2}"
+    },
+    "deployFabricPrivateLink": {
+      "value": "${DEPLOY_FABRIC_PRIVATE_LINK=true}"
+    },
+    "deployBastion": {
+      "value": "${DEPLOY_BASTION=false}"
+    },
+    "lockdownOutbound": {
+      "value": "${LOCKDOWN_OUTBOUND=false}"
+    }
+  }
+}
