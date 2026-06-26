@@ -126,12 +126,14 @@ After pushing this repo to GitHub, replace `OWNER/REPO` and `BRANCH` in the butt
 (`azuredeploy.json` must be reachable at the raw URL). The button opens a **resource‑group‑scoped**
 custom deployment in the portal.
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOWNER%2FREPO%2FBRANCH%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fytthuan%2Ffabric-privatelink
+%2Fmain%2Fazuredeploy.json)
 
 Markdown for your README once the repo is public:
 
 ```md
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FOWNER%2FREPO%2FBRANCH%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fytthuan%2Ffabric-privatelink
+%2Fmain%2Fazuredeploy.json)
 ```
 
 ### 2) Azure CLI
