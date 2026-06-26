@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "comment": "Sample parameters for azuredeploy.json (resource-group scope). Pick ONE capacity mode.",
+  "parameters": {
+    "namePrefix": {
+      "value": "fabpl"
+    },
+    "createFabricCapacity": {
+      "value": false
+    },
+    "existingFabricCapacityResourceId": {
+      "value": "/subscriptions/REPLACE_SUB_ID/resourceGroups/REPLACE_RG/providers/Microsoft.Fabric/capacities/REPLACE_CAPACITY_NAME"
+    },
+    "newFabricCapacitySku": {
+      "value": "F2"
+    },
+    "newFabricCapacityName": {
+      "value": ""
+    },
+    "fabricCapacityAdmins": {
+      "value": []
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "vnetAddressSpace": {
+      "value": "10.40.0.0/16"
+    },
+    "peSubnetPrefix": {
+      "value": "10.40.1.0/24"
+    },
+    "resolverSubnetPrefix": {
+      "value": "10.40.2.0/28"
+    },
+    "deployDnsResolver": {
+      "value": true
+    },
+    "resolverInboundIp": {
+      "value": "10.40.2.4"
+    },
+    "peerToHubVnetResourceId": {
+      "value": ""
+    },
+    "useRemoteGateways": {
+      "value": true
+    }
+  }
+}

@@ -1,0 +1,696 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "4618075302596332109"
+    }
+  },
+  "parameters": {
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "fabpl",
+      "minLength": 3,
+      "maxLength": 10,
+      "metadata": {
+        "description": "Short prefix for resource names (lowercase alphanumeric)."
+      }
+    },
+    "createFabricCapacity": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Capacity mode. false = reference an EXISTING capacity (set existingFabricCapacityResourceId). true = CREATE a new capacity (set fabricCapacityAdmins, optionally newFabricCapacityName/Sku)."
+      }
+    },
+    "existingFabricCapacityResourceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "EXISTING mode: resource ID of your Fabric capacity (Microsoft.Fabric/capacities). Required when createFabricCapacity = false."
+      }
+    },
+    "newFabricCapacitySku": {
+      "type": "string",
+      "defaultValue": "F2",
+      "metadata": {
+        "description": "CREATE mode: capacity SKU. Required tier is Fabric (e.g. F2, F4, F8, F64)."
+      }
+    },
+    "newFabricCapacityName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "CREATE mode: capacity name (3-63 lowercase alphanumeric). Empty = auto-generate from namePrefix."
+      }
+    },
+    "fabricCapacityAdmins": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "CREATE mode: capacity administrators (Entra user UPNs or service-principal object ids). Required when createFabricCapacity = true."
+      }
+    },
+    "tenantId": {
+      "type": "string",
+      "defaultValue": "[tenant().tenantId]",
+      "metadata": {
+        "description": "Entra tenant id used for the Private Link service. Defaults to the deployment tenant."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure region for the VNet, resolver, private endpoint, and (when created) the capacity. Empty = the resource group region."
+      }
+    },
+    "vnetAddressSpace": {
+      "type": "string",
+      "defaultValue": "10.40.0.0/16",
+      "metadata": {
+        "description": "Address space for the services VNet. Must not overlap your existing networks."
+      }
+    },
+    "peSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.40.1.0/24",
+      "metadata": {
+        "description": "Private-endpoint subnet prefix (inside vnetAddressSpace)."
+      }
+    },
+    "resolverSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.40.2.0/28",
+      "metadata": {
+        "description": "DNS Private Resolver inbound subnet prefix (/28 or larger, inside vnetAddressSpace)."
+      }
+    },
+    "deployDnsResolver": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy an Azure DNS Private Resolver inbound endpoint (so on-prem DNS can conditionally forward Fabric names privately)."
+      }
+    },
+    "resolverInboundIp": {
+      "type": "string",
+      "defaultValue": "10.40.2.4",
+      "metadata": {
+        "description": "Static IP for the resolver inbound endpoint (must be inside resolverSubnetPrefix)."
+      }
+    },
+    "peerToHubVnetResourceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional: resource ID of your EXISTING connectivity hub VNet (with ExpressRoute/VPN gateway) to peer this VNet to. Empty = no peering (peer it yourself)."
+      }
+    },
+    "useRemoteGateways": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "When peering to the hub, use the hub's remote gateway (ExpressRoute/VPN) for on-prem reachability. Requires the hub side to allow gateway transit and have a gateway."
+      }
+    }
+  },
+  "variables": {
+    "effectiveLocation": "[if(empty(parameters('location')), resourceGroup().location, parameters('location'))]",
+    "existingCapIdSafe": "[if(empty(parameters('existingFabricCapacityResourceId')), '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/placeholder/providers/Microsoft.Fabric/capacities/placeholder', parameters('existingFabricCapacityResourceId'))]",
+    "existingCapParts": "[split(variables('existingCapIdSafe'), '/')]",
+    "vnetName": "[format('vnet-{0}-fabric', parameters('namePrefix'))]"
+  },
+  "resources": [
+    {
+      "condition": "[parameters('createFabricCapacity')]",
+      "type": "Microsoft.Fabric/capacities",
+      "apiVersion": "2023-11-01",
+      "name": "[if(empty(parameters('newFabricCapacityName')), toLower(format('{0}cap{1}', parameters('namePrefix'), uniqueString(resourceGroup().id))), parameters('newFabricCapacityName'))]",
+      "location": "[variables('effectiveLocation')]",
+      "sku": {
+        "name": "[parameters('newFabricCapacitySku')]",
+        "tier": "Fabric"
+      },
+      "properties": {
+        "administration": {
+          "members": "[parameters('fabricCapacityAdmins')]"
+        }
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('peerToHubVnetResourceId')))]",
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}/{1}', variables('vnetName'), 'to-hub')]",
+      "properties": {
+        "remoteVirtualNetwork": {
+          "id": "[parameters('peerToHubVnetResourceId')]"
+        },
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": "[parameters('useRemoteGateways')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'vnet-fabric')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "vnet-fabric",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('vnetName')]"
+          },
+          "location": {
+            "value": "[variables('effectiveLocation')]"
+          },
+          "addressPrefixes": {
+            "value": [
+              "[parameters('vnetAddressSpace')]"
+            ]
+          },
+          "subnets": {
+            "value": "[concat(createArray(createObject('name', 'snet-pe', 'addressPrefix', parameters('peSubnetPrefix'), 'disablePeNetworkPolicies', true())), if(parameters('deployDnsResolver'), createArray(createObject('name', 'snet-dnspr-inbound', 'addressPrefix', parameters('resolverSubnetPrefix'), 'delegation', 'Microsoft.Network/dnsResolvers')), createArray()))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "10046706052589395195"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "addressPrefixes": {
+              "type": "array",
+              "metadata": {
+                "description": "Address space, e.g. [\"10.10.0.0/16\"]."
+              }
+            },
+            "subnets": {
+              "type": "array",
+              "metadata": {
+                "description": "Subnet definitions. Each item:\n{\n  name: string\n  addressPrefix: string\n  nsgId: string?            // associate an NSG\n  delegation: string?       // service name, e.g. \"Microsoft.Network/dnsResolvers\"\n  disablePeNetworkPolicies: bool?  // set true for private endpoint subnets\n}\n"
+              }
+            },
+            "dnsServers": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Custom DNS servers for the VNet. Empty = Azure-provided DNS."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-11-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "subnets",
+                    "count": "[length(parameters('subnets'))]",
+                    "input": {
+                      "name": "[parameters('subnets')[copyIndex('subnets')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('subnets')[copyIndex('subnets')].addressPrefix]",
+                        "networkSecurityGroup": "[if(and(contains(parameters('subnets')[copyIndex('subnets')], 'nsgId'), not(empty(parameters('subnets')[copyIndex('subnets')].nsgId))), createObject('id', parameters('subnets')[copyIndex('subnets')].nsgId), null())]",
+                        "delegations": "[if(and(contains(parameters('subnets')[copyIndex('subnets')], 'delegation'), not(empty(parameters('subnets')[copyIndex('subnets')].delegation))), createArray(createObject('name', 'delegation', 'properties', createObject('serviceName', parameters('subnets')[copyIndex('subnets')].delegation))), null())]",
+                        "privateEndpointNetworkPolicies": "[if(and(contains(parameters('subnets')[copyIndex('subnets')], 'disablePeNetworkPolicies'), bool(parameters('subnets')[copyIndex('subnets')].disablePeNetworkPolicies)), 'Disabled', 'Enabled')]"
+                      }
+                    }
+                  }
+                ],
+                "addressSpace": {
+                  "addressPrefixes": "[parameters('addressPrefixes')]"
+                },
+                "dhcpOptions": "[if(empty(parameters('dnsServers')), null(), createObject('dnsServers', parameters('dnsServers')))]"
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "subnetIds": {
+              "type": "object",
+              "metadata": {
+                "description": "Map of subnet name -> resource id."
+              },
+              "value": "[toObject(reference(resourceId('Microsoft.Network/virtualNetworks', parameters('name')), '2023-11-01').subnets, lambda('s', lambdaVariables('s').name), lambda('s', lambdaVariables('s').id))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[parameters('deployDnsResolver')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "dns-resolver",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('dnspr-{0}', parameters('namePrefix'))]"
+          },
+          "location": {
+            "value": "[variables('effectiveLocation')]"
+          },
+          "vnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vnet-fabric'), '2025-04-01').outputs.id.value]"
+          },
+          "inboundSubnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vnet-fabric'), '2025-04-01').outputs.subnetIds.value['snet-dnspr-inbound']]"
+          },
+          "inboundIp": {
+            "value": "[parameters('resolverInboundIp')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "18432762429225357234"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Resolver name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region. Must match the VNet region."
+              }
+            },
+            "vnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Hub VNet resource id."
+              }
+            },
+            "inboundSubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Inbound endpoint subnet id (delegated to Microsoft.Network/dnsResolvers)."
+              }
+            },
+            "inboundIp": {
+              "type": "string",
+              "metadata": {
+                "description": "Static private IP for the inbound endpoint (must be inside the inbound subnet)."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/dnsResolvers",
+              "apiVersion": "2022-07-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[parameters('vnetId')]"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/dnsResolvers/inboundEndpoints",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'inbound')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "privateIpAllocationMethod": "Static",
+                    "privateIpAddress": "[parameters('inboundIp')]",
+                    "subnet": {
+                      "id": "[parameters('inboundSubnetId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsResolvers', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "resolverId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/dnsResolvers', parameters('name'))]"
+            },
+            "inboundIp": {
+              "type": "string",
+              "metadata": {
+                "description": "Configured static inbound endpoint IP (use as the on-prem conditional-forwarder target)."
+              },
+              "value": "[parameters('inboundIp')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'vnet-fabric')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "private-dns",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vnet-fabric'), '2025-04-01').outputs.id.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5776852351661074693"
+            }
+          },
+          "parameters": {
+            "vnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Hub VNet resource id to link the zones to."
+              }
+            },
+            "zoneNames": {
+              "type": "array",
+              "defaultValue": [
+                "privatelink.analysis.windows.net",
+                "privatelink.pbidedicated.windows.net",
+                "privatelink.prod.powerquery.microsoft.com"
+              ],
+              "metadata": {
+                "description": "Private DNS zone names. Default = the three tenant-level Fabric/Power BI zones.\n"
+              }
+            }
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "zones",
+                "count": "[length(parameters('zoneNames'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[parameters('zoneNames')[copyIndex()]]",
+              "location": "global"
+            },
+            {
+              "copy": {
+                "name": "links",
+                "count": "[length(parameters('zoneNames'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', parameters('zoneNames')[copyIndex()], format('link-{0}', uniqueString(parameters('vnetId'))))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[parameters('vnetId')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneNames')[copyIndex()])]"
+              ]
+            }
+          ],
+          "outputs": {
+            "zoneConfigs": {
+              "type": "array",
+              "metadata": {
+                "description": "Array of { name, id } for each zone, for a private endpoint DNS zone group."
+              },
+              "copy": {
+                "count": "[length(parameters('zoneNames'))]",
+                "input": {
+                  "name": "[replace(parameters('zoneNames')[copyIndex()], '.', '-')]",
+                  "id": "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneNames')[copyIndex()])]"
+                }
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'vnet-fabric')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "fabric-privatelink",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "privateLinkServiceName": {
+            "value": "[format('pls-{0}-fabric', parameters('namePrefix'))]"
+          },
+          "privateEndpointName": {
+            "value": "[format('pe-{0}-fabric-tenant', parameters('namePrefix'))]"
+          },
+          "location": {
+            "value": "[variables('effectiveLocation')]"
+          },
+          "tenantId": {
+            "value": "[parameters('tenantId')]"
+          },
+          "peSubnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vnet-fabric'), '2025-04-01').outputs.subnetIds.value['snet-pe']]"
+          },
+          "privateDnsZoneConfigs": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'private-dns'), '2025-04-01').outputs.zoneConfigs.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "621887292062997078"
+            }
+          },
+          "parameters": {
+            "privateLinkServiceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Private Link service (privateLinkServicesForPowerBI) resource name."
+              }
+            },
+            "privateEndpointName": {
+              "type": "string",
+              "metadata": {
+                "description": "Private endpoint name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the private endpoint (the PLS and DNS zones are global)."
+              }
+            },
+            "tenantId": {
+              "type": "string",
+              "metadata": {
+                "description": "Entra tenant id used for the Private Link service."
+              }
+            },
+            "peSubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Private endpoint subnet id."
+              }
+            },
+            "privateDnsZoneConfigs": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Private DNS zone configs [{ name, id }] for the endpoint DNS zone group."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.PowerBI/privateLinkServicesForPowerBI",
+              "apiVersion": "2020-06-01",
+              "name": "[parameters('privateLinkServiceName')]",
+              "location": "global",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]"
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2023-11-01",
+              "name": "[parameters('privateEndpointName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('peSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-conn', parameters('privateEndpointName'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.PowerBI/privateLinkServicesForPowerBI', parameters('privateLinkServiceName'))]",
+                      "groupIds": [
+                        "tenant"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.PowerBI/privateLinkServicesForPowerBI', parameters('privateLinkServiceName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('privateDnsZoneConfigs')))]",
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', parameters('privateEndpointName'), 'default')]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "privateDnsZoneConfigs",
+                    "count": "[length(parameters('privateDnsZoneConfigs'))]",
+                    "input": {
+                      "name": "[parameters('privateDnsZoneConfigs')[copyIndex('privateDnsZoneConfigs')].name]",
+                      "properties": {
+                        "privateDnsZoneId": "[parameters('privateDnsZoneConfigs')[copyIndex('privateDnsZoneConfigs')].id]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', parameters('privateEndpointName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "privateLinkServiceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.PowerBI/privateLinkServicesForPowerBI', parameters('privateLinkServiceName'))]"
+            },
+            "privateEndpointId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/privateEndpoints', parameters('privateEndpointName'))]"
+            },
+            "privateEndpointName": {
+              "type": "string",
+              "value": "[parameters('privateEndpointName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'private-dns')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vnet-fabric')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "servicesVnetId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vnet-fabric'), '2025-04-01').outputs.id.value]"
+    },
+    "peSubnetId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vnet-fabric'), '2025-04-01').outputs.subnetIds.value['snet-pe']]"
+    },
+    "privateEndpointId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'fabric-privatelink'), '2025-04-01').outputs.privateEndpointId.value]"
+    },
+    "resolverInboundIp": {
+      "type": "string",
+      "value": "[if(parameters('deployDnsResolver'), parameters('resolverInboundIp'), '')]"
+    },
+    "fabricCapacityMode": {
+      "type": "string",
+      "value": "[if(parameters('createFabricCapacity'), 'created', 'existing')]"
+    },
+    "fabricCapacityName": {
+      "type": "string",
+      "value": "[if(parameters('createFabricCapacity'), if(empty(parameters('newFabricCapacityName')), toLower(format('{0}cap{1}', parameters('namePrefix'), uniqueString(resourceGroup().id))), parameters('newFabricCapacityName')), last(variables('existingCapParts')))]"
+    },
+    "fabricCapacityId": {
+      "type": "string",
+      "value": "[if(parameters('createFabricCapacity'), resourceId('Microsoft.Fabric/capacities', if(empty(parameters('newFabricCapacityName')), toLower(format('{0}cap{1}', parameters('namePrefix'), uniqueString(resourceGroup().id))), parameters('newFabricCapacityName'))), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('existingCapParts')[2], variables('existingCapParts')[4]), 'Microsoft.Fabric/capacities', last(variables('existingCapParts'))))]"
+    },
+    "onPremForwarderDomains": {
+      "type": "array",
+      "metadata": {
+        "description": "Conditional-forwarder domains to add on your on-prem DNS, pointing at resolverInboundIp."
+      },
+      "value": [
+        "analysis.windows.net",
+        "pbidedicated.windows.net",
+        "prod.powerquery.microsoft.com",
+        "powerbi.com",
+        "fabric.microsoft.com"
+      ]
+    }
+  }
+}

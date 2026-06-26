@@ -122,7 +122,18 @@ Pick **one** of the three paths. All use the same modules.
 
 ### 1) Deploy to Azure button (portal)
 
+**Lab** — full hub‑spoke + simulated on‑prem + VPN + VMs + a **new** F2 capacity:
+
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fytthuan%2Ffabric-privatelink%2Fmain%2Fazuredeploy.json)
+
+**Production** — tenant Private Link landing only (no on‑prem); **use an existing** Fabric capacity **or create a new** one:
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fytthuan%2Ffabric-privatelink%2Fmain%2Finfra-prod%2Fazuredeploy.json)
+
+> Both buttons open a **resource‑group‑scoped** custom deployment. For the **production** template,
+> enable tenant **Azure Private Link** in the Fabric admin portal first, then on the form pick the
+> capacity mode (`createFabricCapacity` = `false` + `existingFabricCapacityResourceId`, or `true` +
+> `fabricCapacityAdmins`). Details: [`infra-prod/README.md`](infra-prod/README.md).
 
 
 ### 2) Azure CLI
@@ -221,14 +232,26 @@ browse to `https://app.fabric.microsoft.com` to use Fabric privately.
 azuredeploy.json              # compiled ARM (Deploy-to-Azure button + az group)  [generated]
 azuredeploy.parameters.json   # sample parameters
 azure.yaml                    # azd configuration
-infra/
+infra/                        # LAB template: full hub-spoke + simulated on-prem + VPN + VMs + new F2 capacity
   main.bicep                  # subscription scope: creates the RG, calls resources.bicep (azd / az sub)
   resources.bicep             # resource-group scope: all resources (compiled -> azuredeploy.json)
   main.parameters.json        # azd parameter bindings
   modules/                    # network, nsg, privatedns, dnsresolver, fabric, vpngateway, connections, peering, windowsvm, bastion
+infra-prod/                   # PRODUCTION template: tenant Private Link landing only (no on-prem); existing OR new capacity
+  main.bicep / resources.bicep / modules/fabric-privatelink.bicep
+  azuredeploy.json            # compiled ARM  [generated]
+  README.md                   # production usage
+docs/
+  fabric-private-link-vpn-runbook.md   # full runbook (architecture, IaC + portal steps, gateway, feature availability)
 scripts/
   setup-dns-forwarder.ps1     # on-prem DNS role + default + conditional forwarders (embedded at build)
 ```
+
+> **Lab vs production:** [`infra/`](infra) is the self-contained **lab** (simulated on-prem, VPN
+> gateways, VMs, and a **new** F2 capacity). [`infra-prod/`](infra-prod) is the **production** variant
+> — it deploys **only** the Fabric tenant Private Link landing, connects to your **real**
+> ExpressRoute/VPN network, and lets you **use an existing** Fabric capacity **or create a new** one.
+> See [`infra-prod/README.md`](infra-prod/README.md).
 
 After editing any Bicep, regenerate the ARM template:
 

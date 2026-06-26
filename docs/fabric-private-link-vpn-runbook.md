@@ -685,13 +685,13 @@ Status from the pre‑publish scan of this repo:
 | Secrets in **git history**? | **No** — single initial commit, only `<placeholder>` examples ✓ |
 | Hardcoded secrets in tracked Bicep/params/scripts? | **No** — params are `@secure()`; `azuredeploy.parameters.json` uses `REPLACE_WITH_*` ✓ |
 | Real **subscription ID / lab passwords** in `docs/` runbook? | **Removed** — redacted to placeholders ✓ |
-| `LICENSE` file | **Missing** — add one before publishing (e.g. MIT) |
+| `LICENSE` file | **Added** — MIT ✓ |
 | `SECURITY.md` / `CONTRIBUTING.md` | Optional — recommended for a public repo |
 | README **Deploy to Azure** button | Has `OWNER/REPO/BRANCH` placeholders — fill in after publishing |
 | Rotate the lab `VPN_SHARED_KEY` / `VM_ADMIN_PASSWORD` if reused elsewhere | Recommended (they live only in local `.env`) |
 
-**Verdict:** safe to publish **after** adding a `LICENSE` and filling the README button URL. No
-secrets are tracked or in history; the only sensitive values were in the local `.env`/`.azure/`
+**Verdict:** safe to publish — `LICENSE` (MIT) added; the README button URL still needs filling.
+No secrets are tracked or in history; the only sensitive values were in the local `.env`/`.azure/`
 (gitignored) and the runbook's lab IDs/passwords (now redacted).
 
 ---

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "namePrefix": {
+      "value": "${NAME_PREFIX=fabpl}"
+    },
+    "createFabricCapacity": {
+      "value": "${CREATE_FABRIC_CAPACITY=false}"
+    },
+    "existingFabricCapacityResourceId": {
+      "value": "${EXISTING_FABRIC_CAPACITY_ID=}"
+    },
+    "newFabricCapacitySku": {
+      "value": "${FABRIC_CAPACITY_SKU=F2}"
+    },
+    "newFabricCapacityName": {
+      "value": "${FABRIC_CAPACITY_NAME=}"
+    },
+    "fabricCapacityAdmins": {
+      "value": ["${FABRIC_CAPACITY_ADMIN=}"]
+    },
+    "vnetAddressSpace": {
+      "value": "${VNET_ADDRESS_SPACE=10.40.0.0/16}"
+    },
+    "peSubnetPrefix": {
+      "value": "${PE_SUBNET_PREFIX=10.40.1.0/24}"
+    },
+    "resolverSubnetPrefix": {
+      "value": "${RESOLVER_SUBNET_PREFIX=10.40.2.0/28}"
+    },
+    "deployDnsResolver": {
+      "value": "${DEPLOY_DNS_RESOLVER=true}"
+    },
+    "resolverInboundIp": {
+      "value": "${RESOLVER_INBOUND_IP=10.40.2.4}"
+    },
+    "peerToHubVnetResourceId": {
+      "value": "${PEER_TO_HUB_VNET_ID=}"
+    },
+    "useRemoteGateways": {
+      "value": "${USE_REMOTE_GATEWAYS=true}"
+    }
+  }
+}
