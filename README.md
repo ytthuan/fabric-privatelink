@@ -129,13 +129,6 @@ custom deployment in the portal.
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fytthuan%2Ffabric-privatelink
 %2Fmain%2Fazuredeploy.json)
 
-Markdown for your README once the repo is public:
-
-```md
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fytthuan%2Ffabric-privatelink
-%2Fmain%2Fazuredeploy.json)
-```
-
 ### 2) Azure CLI
 
 ```bash
