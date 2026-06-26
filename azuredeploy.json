@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "2965783404929666812"
+      "templateHash": "1472278670887561625"
     }
   },
   "parameters": {
@@ -125,11 +125,11 @@
         "analysis.windows.net",
         "pbidedicated.windows.net",
         "prod.powerquery.microsoft.com",
-        "app.powerbi.com",
-        "app.fabric.microsoft.com"
+        "powerbi.com",
+        "fabric.microsoft.com"
       ],
       "metadata": {
-        "description": "Public parent domains conditionally forwarded from on-prem to the resolver."
+        "description": "Public parent domains conditionally forwarded from on-prem to the resolver. Use broad parents (powerbi.com, fabric.microsoft.com) so the FULL Fabric/Power BI name resolution — portal, APIs, and OneLake (onelake.dfs/blob.fabric.microsoft.com, workspace FQDNs) — is sent to the private resolver. Narrow app.* forwarders leak OneLake to public DNS because its public CNAME chain resolves fully before the privatelink hop is re-queried."
       }
     }
   },
@@ -1802,7 +1802,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "16985476379100715661"
+              "templateHash": "1882224391218367313"
             }
           },
           "parameters": {
@@ -1826,9 +1826,9 @@
             },
             "skuName": {
               "type": "string",
-              "defaultValue": "VpnGw1",
+              "defaultValue": "VpnGw1AZ",
               "metadata": {
-                "description": "Gateway SKU."
+                "description": "Gateway SKU. Must be an AZ SKU (VpnGw1AZ-VpnGw5AZ); non-AZ VpnGw1-5 SKUs are no longer allowed for new VPN gateways. AZ SKUs require the associated Standard public IP to have zones configured (set on the pip below)."
               }
             },
             "asn": {
@@ -1848,6 +1848,11 @@
               "sku": {
                 "name": "Standard"
               },
+              "zones": [
+                "1",
+                "2",
+                "3"
+              ],
               "properties": {
                 "publicIPAllocationMethod": "Static"
               }
@@ -1935,7 +1940,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "16985476379100715661"
+              "templateHash": "1882224391218367313"
             }
           },
           "parameters": {
@@ -1959,9 +1964,9 @@
             },
             "skuName": {
               "type": "string",
-              "defaultValue": "VpnGw1",
+              "defaultValue": "VpnGw1AZ",
               "metadata": {
-                "description": "Gateway SKU."
+                "description": "Gateway SKU. Must be an AZ SKU (VpnGw1AZ-VpnGw5AZ); non-AZ VpnGw1-5 SKUs are no longer allowed for new VPN gateways. AZ SKUs require the associated Standard public IP to have zones configured (set on the pip below)."
               }
             },
             "asn": {
@@ -1981,6 +1986,11 @@
               "sku": {
                 "name": "Standard"
               },
+              "zones": [
+                "1",
+                "2",
+                "3"
+              ],
               "properties": {
                 "publicIPAllocationMethod": "Static"
               }

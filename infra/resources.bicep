@@ -65,13 +65,13 @@ param resolverInboundIp string = '10.10.3.4'
 @description('Static IP for the on-premises DNS server VM (inside snet-dns).')
 param onpremDnsServerIp string = '10.20.1.4'
 
-@description('Public parent domains conditionally forwarded from on-prem to the resolver.')
+@description('Public parent domains conditionally forwarded from on-prem to the resolver. Use broad parents (powerbi.com, fabric.microsoft.com) so the FULL Fabric/Power BI name resolution — portal, APIs, and OneLake (onelake.dfs/blob.fabric.microsoft.com, workspace FQDNs) — is sent to the private resolver. Narrow app.* forwarders leak OneLake to public DNS because its public CNAME chain resolves fully before the privatelink hop is re-queried.')
 param forwarderDomains array = [
   'analysis.windows.net'
   'pbidedicated.windows.net'
   'prod.powerquery.microsoft.com'
-  'app.powerbi.com'
-  'app.fabric.microsoft.com'
+  'powerbi.com'
+  'fabric.microsoft.com'
 ]
 
 // ----------------------------------------------------------------------------

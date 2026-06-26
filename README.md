@@ -74,14 +74,20 @@ subsequent **data traffic** (on‑prem client → the private endpoint IP in the
 1. The on‑prem **client VM** uses the on‑prem **DNS server VM** (`10.20.1.4`) as its resolver.
 2. The DNS server has **conditional forwarders** for the Fabric/Power BI public parent domains
    (`analysis.windows.net`, `pbidedicated.windows.net`, `prod.powerquery.microsoft.com`,
-   `app.powerbi.com`, `app.fabric.microsoft.com`) pointing at the **Azure DNS Private Resolver**
+   `powerbi.com`, `fabric.microsoft.com`) pointing at the **Azure DNS Private Resolver**
    inbound endpoint (`10.10.3.4`) across the VPN. A **default forwarder** to `168.63.129.16` keeps
    all other name resolution working.
+
+   > **Use the broad parent domains** (`powerbi.com`, `fabric.microsoft.com`) — **not** the narrow
+   > `app.powerbi.com` / `app.fabric.microsoft.com`. A narrow `app.*` forwarder leaks **OneLake**
+   > (`onelake.dfs/blob.fabric.microsoft.com`) to public DNS, because OneLake's public CNAME chain
+   > resolves fully before the `privatelink` hop is re‑queried. Forwarding the parent sends the whole
+   > Fabric/Power BI name family — portal, APIs, and OneLake — to the private resolver.
 3. The resolver answers from the **private DNS zones** (linked to the hub VNet, where the resolver
    lives), returning the **private IP** of the Fabric private endpoint — which sits in the spoke —
    via the `CNAME → privatelink` chain.
 
-> **Trade-off:** because `app.powerbi.com` / `app.fabric.microsoft.com` are conditionally forwarded
+> **Trade-off:** because `powerbi.com` / `fabric.microsoft.com` are conditionally forwarded
 > to the resolver, on‑prem resolution of the Fabric **portal** (not just private data endpoints)
 > depends on the VPN tunnel + resolver being up. If the tunnel is down, those names are
 > unresolvable from on‑prem — the expected cost of routing them privately.
